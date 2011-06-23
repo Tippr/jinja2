@@ -30,7 +30,7 @@ def split_template_path(template):
         if path.sep in piece \
            or (path.altsep and path.altsep in piece) or \
            piece == path.pardir:
-            raise TemplateNotFound(template)
+            raise TemplateNotFound(template, message='template path %r is unsafe' % template)
         elif piece and piece != '.':
             pieces.append(piece)
     return pieces
@@ -90,7 +90,7 @@ class BaseLoader(object):
         if not self.has_source_access:
             raise RuntimeError('%s cannot provide access to the source' %
                                self.__class__.__name__)
-        raise TemplateNotFound(template)
+        raise TemplateNotFound(template, message='cannot retrieve %r; loader must override get_source()' % template)
 
     def list_templates(self):
         """Iterates over all templates.  If the loader does not support that
@@ -177,7 +177,7 @@ class FileSystemLoader(BaseLoader):
                 except OSError:
                     return False
             return contents, filename, uptodate
-        raise TemplateNotFound(template)
+        raise TemplateNotFound(template, message='Unable to find %r in %r' % (template, self.searchpath))
 
     def list_templates(self):
         found = set()
@@ -224,7 +224,7 @@ class PackageLoader(BaseLoader):
         pieces = split_template_path(template)
         p = '/'.join((self.package_path,) + tuple(pieces))
         if not self.provider.has_resource(p):
-            raise TemplateNotFound(template)
+            raise TemplateNotFound(template, message='template %r: provider %r does not have resource %r' % (template, self.provider, p))
 
         filename = uptodate = None
         if self.filesystem_bound:
