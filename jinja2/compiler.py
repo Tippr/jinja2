@@ -724,6 +724,11 @@ class CodeGenerator(NodeVisitor):
         # and assigned.
         if 'loop' in frame.identifiers.declared:
             args = args + ['l_loop=l_loop']
+        if self.environment.macro_decorator:
+            if hasattr(node, 'call'):
+                self.writeline('@macro_decorator("call", %r, args=%r)' % (node.call.node.name, args))
+            else:
+                self.writeline('@macro_decorator("invoke", %r, args=%r)' % (node.name, args))
         self.writeline('def macro(%s):' % ', '.join(args), node)
         self.indent()
         self.buffer(frame)
@@ -759,6 +764,14 @@ class CodeGenerator(NodeVisitor):
 
     # -- Statement Visitors
 
+    def import_user_decorator(self, name):
+        source_name = getattr(self.environment, name)
+        if not source_name:
+            return
+        (module_name, item_name) = source_name.rsplit('.', 1)
+        self.writeline('%s = getattr(__import__(%r, fromlist=[%r]), %r)' % (
+            name, module_name, item_name, item_name))
+
     def visit_Template(self, node, frame=None):
         assert frame is None, 'no root frame allowed'
         eval_ctx = EvalContext(self.environment, self.name)
@@ -766,6 +779,9 @@ class CodeGenerator(NodeVisitor):
         from jinja2.runtime import __all__ as exported
         self.writeline('from __future__ import division')
         self.writeline('from jinja2.runtime import ' + ', '.join(exported))
+        self.import_user_decorator('block_decorator')
+        self.import_user_decorator('macro_decorator')
+        self.import_user_decorator('template_decorator')
         if not unoptimize_before_dead_code:
             self.writeline('dummy = lambda *x: None')
 
@@ -799,6 +815,8 @@ class CodeGenerator(NodeVisitor):
         self.writeline('name = %r' % self.name)
 
         # generate the root render function.
+        if self.environment.template_decorator:
+            self.writeline('@template_decorator(%r%s)' % (self.name, envenv))
         self.writeline('def root(context%s):' % envenv, extra=1)
 
         # process the root
@@ -834,6 +852,8 @@ class CodeGenerator(NodeVisitor):
             block_frame = Frame(eval_ctx)
             block_frame.inspect(block.body)
             block_frame.block = name
+            if self.environment.block_decorator:
+                self.writeline('@block_decorator(%r%s)' % (name, envenv))
             self.writeline('def block_%s(context%s):' % (name, envenv),
                            block, 1)
             self.indent()
