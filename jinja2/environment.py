@@ -214,6 +214,7 @@ class Environment(object):
     exception_handler = None
     exception_formatter = None
     block_decorator = None
+    macro_call_decorator = None
     macro_decorator = None
     template_decorator = None
 
