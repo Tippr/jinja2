@@ -213,10 +213,10 @@ class Environment(object):
     #: these are currently EXPERIMENTAL undocumented features.
     exception_handler = None
     exception_formatter = None
-    block_decorator = None
-    macro_call_decorator = None
-    macro_decorator = None
-    template_decorator = None
+    block_contextmgr = None
+    macro_call_contextmgr = None
+    macro_contextmgr = None
+    template_contextmgr = None
 
     def __init__(self,
                  block_start_string=BLOCK_START_STRING,

@@ -721,18 +721,25 @@ class CodeGenerator(NodeVisitor):
         # and assigned.
         if 'loop' in frame.identifiers.declared:
             args = args + ['l_loop=l_loop']
-        if hasattr(node, 'call'):
-            if self.environment.macro_call_decorator:
-                self.writeline('@macro_call_decorator(name, %r, args=%r)' % (node.call.node.name, args))
-        else:
-            if self.environment.macro_decorator:
-                self.writeline('@macro_decorator(name, %r, args=%r)' % (node.name, args))
         self.writeline('def macro(%s):' % ', '.join(args), node)
+        in_contextmgr = False
+        if hasattr(node, 'call'):
+            if self.environment.macro_call_contextmgr:
+                in_contextmgr = True
+                self.writeline('using macro_call_contextmgr(name, %r, args=%r):' % (node.call.node.name, args))
+                self.indent()
+        else:
+            if self.environment.macro_contextmgr:
+                in_contextmgr = True
+                self.writeline('using macro_contextmgr(name, %r, args=%r):' % (node.name, args))
+                self.indent()
         self.indent()
         self.buffer(frame)
         self.pull_locals(frame)
         self.blockvisit(node.body, frame)
         self.return_buffer_contents(frame)
+        if in_contextmgr:
+            self.outdent()
         self.outdent()
         return frame
 
@@ -762,7 +769,7 @@ class CodeGenerator(NodeVisitor):
 
     # -- Statement Visitors
 
-    def import_user_decorator(self, name):
+    def import_user_contextmgr(self, name):
         source_name = getattr(self.environment, name)
         if not source_name:
             return
@@ -778,7 +785,7 @@ class CodeGenerator(NodeVisitor):
         self.writeline('from __future__ import division')
         self.writeline('from jinja2.runtime import ' + ', '.join(exported))
         for decorated_type in 'block', 'macro', 'macro_call', 'template':
-            self.import_user_decorator('%s_decorator' % decorated_type)
+            self.import_user_contextmgr('%s_contextmgr' % decorated_type)
         if not unoptimize_before_dead_code:
             self.writeline('dummy = lambda *x: None')
 
@@ -813,9 +820,10 @@ class CodeGenerator(NodeVisitor):
 
         # generate the root render function.
         self.writeline('')
-        if self.environment.template_decorator:
-            self.writeline('@template_decorator(name, %r%s)' % (self.name, envenv))
         self.writeline('def root(context%s):' % envenv)
+        if self.environment.template_contextmgr:
+            self.writeline('using template_contextmgr(name, %r%s):' % (self.name, envenv))
+            self.indent()
 
         # process the root
         frame = Frame(eval_ctx)
@@ -831,6 +839,8 @@ class CodeGenerator(NodeVisitor):
         self.pull_locals(frame)
         self.pull_dependencies(node.body)
         self.blockvisit(node.body, frame)
+        if self.environment.template_contextmgr:
+            self.outdent()
         self.outdent()
 
         # make sure that the parent root is called.
@@ -850,11 +860,11 @@ class CodeGenerator(NodeVisitor):
             block_frame = Frame(eval_ctx)
             block_frame.inspect(block.body)
             block_frame.block = name
-            self.writeline('')
-            if self.environment.block_decorator:
-                self.writeline('@block_decorator(name, %r%s)' % (name, envenv))
             self.writeline('def block_%s(context%s):' % (name, envenv),
                            block)
+            if self.environment.block_contextmgr:
+                self.writeline('using block_contextmgr(name, %r%s):' % (name, envenv))
+                self.indent()
             self.indent()
             undeclared = find_undeclared(block.body, ('self', 'super'))
             if 'self' in undeclared:
@@ -867,6 +877,8 @@ class CodeGenerator(NodeVisitor):
             self.pull_locals(block_frame)
             self.pull_dependencies(block.body)
             self.blockvisit(block.body, block_frame)
+            if self.environment.block_contextmgr:
+                self.outdent()
             self.outdent()
 
         self.writeline('blocks = {%s}' % ', '.join('%r: block_%s' % (x, x)
