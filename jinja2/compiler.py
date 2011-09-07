@@ -727,12 +727,12 @@ class CodeGenerator(NodeVisitor):
         if hasattr(node, 'call'):
             if self.environment.macro_call_contextmgr:
                 in_contextmgr = True
-                self.writeline('using macro_call_contextmgr(name, %r, args=%r):' % (node.call.node.name, args))
+                self.writeline('with macro_call_contextmgr(name, %r, args=%r):' % (node.call.node.name, args))
                 self.indent()
         else:
             if self.environment.macro_contextmgr:
                 in_contextmgr = True
-                self.writeline('using macro_contextmgr(name, %r, args=%r):' % (node.name, args))
+                self.writeline('with macro_contextmgr(name, %r, args=%r):' % (node.name, args))
                 self.indent()
         self.buffer(frame)
         self.pull_locals(frame)
@@ -823,7 +823,7 @@ class CodeGenerator(NodeVisitor):
         self.writeline('def root(context%s):' % envenv)
         self.indent()
         if self.environment.template_contextmgr:
-            self.writeline('using template_contextmgr(name, %r%s):' % (self.name, envenv))
+            self.writeline('with template_contextmgr(name, %r%s):' % (self.name, envenv))
             self.indent()
 
         # process the root
@@ -864,7 +864,7 @@ class CodeGenerator(NodeVisitor):
                            block)
             self.indent()
             if self.environment.block_contextmgr:
-                self.writeline('using block_contextmgr(name, %r%s):' % (name, envenv))
+                self.writeline('with block_contextmgr(name, %r%s):' % (name, envenv))
                 self.indent()
             undeclared = find_undeclared(block.body, ('self', 'super'))
             if 'self' in undeclared:
