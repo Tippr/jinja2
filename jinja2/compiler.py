@@ -850,6 +850,7 @@ class CodeGenerator(NodeVisitor):
             block_frame = Frame(eval_ctx)
             block_frame.inspect(block.body)
             block_frame.block = name
+            self.writeline('')
             if self.environment.block_decorator:
                 self.writeline('@block_decorator(name, %r%s)' % (name, envenv))
             self.writeline('def block_%s(context%s):' % (name, envenv),
