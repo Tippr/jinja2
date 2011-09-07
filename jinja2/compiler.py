@@ -722,6 +722,7 @@ class CodeGenerator(NodeVisitor):
         if 'loop' in frame.identifiers.declared:
             args = args + ['l_loop=l_loop']
         self.writeline('def macro(%s):' % ', '.join(args), node)
+        self.indent()
         in_contextmgr = False
         if hasattr(node, 'call'):
             if self.environment.macro_call_contextmgr:
@@ -733,7 +734,6 @@ class CodeGenerator(NodeVisitor):
                 in_contextmgr = True
                 self.writeline('using macro_contextmgr(name, %r, args=%r):' % (node.name, args))
                 self.indent()
-        self.indent()
         self.buffer(frame)
         self.pull_locals(frame)
         self.blockvisit(node.body, frame)
@@ -821,6 +821,7 @@ class CodeGenerator(NodeVisitor):
         # generate the root render function.
         self.writeline('')
         self.writeline('def root(context%s):' % envenv)
+        self.indent()
         if self.environment.template_contextmgr:
             self.writeline('using template_contextmgr(name, %r%s):' % (self.name, envenv))
             self.indent()
@@ -830,7 +831,6 @@ class CodeGenerator(NodeVisitor):
         frame.inspect(node.body)
         frame.toplevel = frame.rootlevel = True
         frame.require_output_check = have_extends and not self.has_known_extends
-        self.indent()
         if have_extends:
             self.writeline('parent_template = None')
         if 'self' in find_undeclared(node.body, ('self',)):
@@ -862,10 +862,10 @@ class CodeGenerator(NodeVisitor):
             block_frame.block = name
             self.writeline('def block_%s(context%s):' % (name, envenv),
                            block)
+            self.indent()
             if self.environment.block_contextmgr:
                 self.writeline('using block_contextmgr(name, %r%s):' % (name, envenv))
                 self.indent()
-            self.indent()
             undeclared = find_undeclared(block.body, ('self', 'super'))
             if 'self' in undeclared:
                 block_frame.identifiers.add_special('self')
