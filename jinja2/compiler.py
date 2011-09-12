@@ -819,8 +819,7 @@ class CodeGenerator(NodeVisitor):
         self.writeline('name = %r' % self.name)
 
         # generate the root render function.
-        self.writeline('')
-        self.writeline('def root(context%s):' % envenv)
+        self.writeline('def root(context%s):' % envenv, extra=1)
         self.indent()
         if self.environment.template_contextmgr:
             self.writeline('with template_contextmgr(name, %r%s):' % (self.name, envenv))
@@ -861,7 +860,7 @@ class CodeGenerator(NodeVisitor):
             block_frame.inspect(block.body)
             block_frame.block = name
             self.writeline('def block_%s(context%s):' % (name, envenv),
-                           block)
+                           block, 1)
             self.indent()
             if self.environment.block_contextmgr:
                 self.writeline('with block_contextmgr(name, %r%s):' % (name, envenv))
