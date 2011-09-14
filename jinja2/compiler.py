@@ -726,9 +726,10 @@ class CodeGenerator(NodeVisitor):
         in_contextmgr = False
         if hasattr(node, 'call'):
             if self.environment.macro_call_contextmgr:
-                in_contextmgr = True
-                self.writeline('with macro_call_contextmgr(name, %r, args=%r):' % (node.call.node.name, args))
-                self.indent()
+                if hasattr(node.call.node, 'name'): # example of cases where this is not true: Getattr, Getitem nodes
+                    in_contextmgr = True
+                    self.writeline('with macro_call_contextmgr(name, %r, args=%r):' % (node.call.node.name, args))
+                    self.indent()
         else:
             if self.environment.macro_contextmgr:
                 in_contextmgr = True
